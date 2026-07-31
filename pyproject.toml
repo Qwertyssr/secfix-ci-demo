@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secfix"
+version = "0.1.0"
+description = "CI/CD security auto-fix agent: turns Black Duck (SCA) and Fortify (SAST) findings into a validated pull request."
+requires-python = ">=3.9"
+dependencies = []          # core has zero runtime deps (stdlib only)
+
+[project.optional-dependencies]
+vertex = ["google-cloud-aiplatform>=1.60"]   # only for AI-assisted SAST fixes
+
+[project.scripts]
+secfix = "secfix.cli:main"
+
+[tool.setuptools]
+packages = ["secfix", "secfix.fixers"]

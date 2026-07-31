@@ -1,0 +1,112 @@
+# Security scan → auto-fix → open PR.
+#
+# Flow: run SAST/SCA scans, and if they report vulnerabilities, the secfix agent
+# generates validated fixes and opens a pull request. Runs on pushes to main and
+# can be triggered manually. It never runs on its own secfix/* branches (no loop).
+
+name: security-fix
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"   # nightly safety net
+
+permissions:
+  contents: write          # push the fix branch
+  pull-requests: write     # open the PR
+
+jobs:
+  scan-and-fix:
+    if: ${{ !startsWith(github.ref_name, 'secfix/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ------------------------------------------------------------------
+      # 1) SECURITY SCAN
+      #    Replace the demo block below with your real scanners. Each scanner
+      #    must emit a JSON file the secfix adapters understand (see docs/REUSE.md).
+      # ------------------------------------------------------------------
+      - name: Security scan (Black Duck + Fortify)
+        run: |
+          mkdir -p scan_reports
+          # --- REAL BLACK DUCK (example) -------------------------------------
+          # bash <(curl -s https://detect.blackduck.com/detect10.sh) \
+          #   --blackduck.url="$BD_URL" --blackduck.api.token="$BD_TOKEN" \
+          #   --detect.project.name=secfix-ci-demo --detect.blackduck.signature.scanner.snippet.matching=NONE
+          # ./export-bd-vulns.sh > scan_reports/blackduck.json
+          #
+          # --- REAL FORTIFY (example) ---------------------------------------
+          # scancentral -sscurl "$SSC_URL" -ssctoken "$FORTIFY_TOKEN" start -upload \
+          #   -application secfix-ci-demo -version main -b build-id
+          # fortifyclient -url "$SSC_URL" -authtoken "$FORTIFY_TOKEN" \
+          #   listIssues -application secfix-ci-demo -applicationVersion main -outputFormat json \
+          #   > scan_reports/fortify.json
+          #
+          # --- DEMO: the repo already ships sample reports in scan_reports/ ---
+          test -f scan_reports/blackduck.json && test -f scan_reports/fortify.json
+        env:
+          BD_URL: ${{ secrets.BD_URL }}
+          BD_TOKEN: ${{ secrets.BD_API_TOKEN }}
+          SSC_URL: ${{ secrets.SSC_URL }}
+          FORTIFY_TOKEN: ${{ secrets.FORTIFY_TOKEN }}
+
+      # ------------------------------------------------------------------
+      # 2) (Optional) Enable AI-assisted SAST fixes via Vertex AI.
+      #    Store the service-account JSON as the GCP_SA_KEY secret. Nothing is
+      #    written if the secret is absent — the rule engine is used instead.
+      #    (secrets are checked in-shell, not in `if:`, which is the supported way.)
+      # ------------------------------------------------------------------
+      - name: Configure Vertex AI credentials (optional)
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION }}
+        run: |
+          if [ -z "$GCP_SA_KEY" ]; then
+            echo "No GCP_SA_KEY secret set — secfix will use the deterministic rule engine."
+            exit 0
+          fi
+          printf '%s' "$GCP_SA_KEY" > "$RUNNER_TEMP/sa-key.json"
+          {
+            echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa-key.json"
+            echo "SECFIX_LLM_PROVIDER=vertex"
+            echo "GOOGLE_CLOUD_PROJECT=$GCP_PROJECT"
+            echo "VERTEX_LOCATION=${VERTEX_LOCATION:-us-central1}"
+          } >> "$GITHUB_ENV"
+          python -m pip install --quiet "google-cloud-aiplatform>=1.60"
+
+      # ------------------------------------------------------------------
+      # 3) RUN THE AGENT: fix + validate + open PR
+      # ------------------------------------------------------------------
+      - name: secfix — auto-fix and open PR
+        run: |
+          python -m secfix \
+            --root . \
+            --blackduck scan_reports/blackduck.json \
+            --fortify scan_reports/fortify.json \
+            --req sample_app/requirements.txt \
+            --severities critical,high \
+            --test-cmd "python -m unittest discover -s sample_app/tests" \
+            --base "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --pr-body-out pr-body.md \
+            --open-pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload PR body artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secfix-pr-body
+          path: pr-body.md
+          if-no-files-found: ignore

@@ -1,0 +1,47 @@
+{
+  "_meta": {
+    "scanner": "fortify",
+    "note": "Shape mirrors GET /api/v1/projectVersions/{id}/issues. Adapter: secfix/normalize.py::normalize_fortify",
+    "app": "secfix-ci-demo",
+    "version": "main"
+  },
+  "count": 4,
+  "data": [
+    {
+      "id": 100201,
+      "issueInstanceId": "F0RT1FY-MD5",
+      "category": "Weak Cryptographic Hash",
+      "friority": "High",
+      "fullFileName": "sample_app/auth.py",
+      "lineNumber": 15,
+      "analyzer": "Semantic"
+    },
+    {
+      "id": 100202,
+      "issueInstanceId": "F0RT1FY-YAML",
+      "category": "Insecure Deserialization",
+      "friority": "Critical",
+      "fullFileName": "sample_app/config_loader.py",
+      "lineNumber": 12,
+      "analyzer": "Data Flow"
+    },
+    {
+      "id": 100203,
+      "issueInstanceId": "F0RT1FY-CMD",
+      "category": "Command Injection",
+      "friority": "Critical",
+      "fullFileName": "sample_app/tasks.py",
+      "lineNumber": 14,
+      "analyzer": "Data Flow"
+    },
+    {
+      "id": 100204,
+      "issueInstanceId": "F0RT1FY-SQLI",
+      "category": "SQL Injection",
+      "friority": "Critical",
+      "fullFileName": "sample_app/db.py",
+      "lineNumber": 13,
+      "analyzer": "Data Flow"
+    }
+  ]
+}

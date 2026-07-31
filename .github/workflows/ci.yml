@@ -1,0 +1,23 @@
+# Runs the agent's own test suites on every push/PR.
+# This is the "does the tool work" gate; security-fix.yml is the "fix the app" job.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Agent unit tests
+        run: python -m unittest tests.test_agent -v
+      - name: Sample app tests
+        run: python -m unittest discover -s sample_app/tests -v
+      - name: Pipeline end-to-end simulation
+        run: python -m unittest tests.test_pipeline_e2e -v

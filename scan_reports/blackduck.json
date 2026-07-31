@@ -1,0 +1,59 @@
+{
+  "_meta": {
+    "scanner": "blackduck",
+    "note": "Shape mirrors GET /api/projects/{id}/versions/{id}/vulnerable-bom-components. Adapter: secfix/normalize.py::normalize_blackduck",
+    "project": "secfix-ci-demo",
+    "version": "main"
+  },
+  "totalCount": 4,
+  "items": [
+    {
+      "componentName": "PyYAML",
+      "componentVersionName": "5.3",
+      "componentVersionOriginId": "pypi:PyYAML:5.3",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2020-14343",
+        "severity": "CRITICAL",
+        "overallScore": 9.8,
+        "remediationStatus": "NEW",
+        "solution": "Upgrade to 5.4 or later"
+      }
+    },
+    {
+      "componentName": "requests",
+      "componentVersionName": "2.19.1",
+      "componentVersionOriginId": "pypi:requests:2.19.1",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2018-18074",
+        "severity": "HIGH",
+        "overallScore": 8.1,
+        "remediationStatus": "NEW",
+        "solution": "Upgrade to 2.20.0 or later"
+      }
+    },
+    {
+      "componentName": "Jinja2",
+      "componentVersionName": "2.10",
+      "componentVersionOriginId": "pypi:Jinja2:2.10",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2019-10906",
+        "severity": "HIGH",
+        "overallScore": 8.6,
+        "remediationStatus": "NEW",
+        "solution": "Upgrade to 2.10.1 or later"
+      }
+    },
+    {
+      "componentName": "urllib3",
+      "componentVersionName": "1.24.1",
+      "componentVersionOriginId": "pypi:urllib3:1.24.1",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2019-11324",
+        "severity": "MEDIUM",
+        "overallScore": 6.5,
+        "remediationStatus": "NEW",
+        "solution": "Upgrade to 1.24.2 or later"
+      }
+    }
+  ]
+}
