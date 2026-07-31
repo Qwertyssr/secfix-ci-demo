@@ -9,6 +9,11 @@ name: security-fix
 on:
   push:
     branches: [main]
+    paths-ignore:      # docs/test/workflow-only changes shouldn't trigger a fix PR
+      - '**/*.md'
+      - 'docs/**'
+      - 'tests/**'
+      - '.github/**'
   workflow_dispatch:
   schedule:
     - cron: "0 3 * * *"   # nightly safety net

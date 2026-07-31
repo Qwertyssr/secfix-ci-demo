@@ -46,8 +46,14 @@ Real source: `GET /api/v1/projectVersions/{id}/issues`.
 ```text
 python -m secfix
   --root DIR                 repo root to operate on (default ".")
-  --blackduck FILE           Black Duck report JSON (omit to skip SCA)
-  --fortify FILE             Fortify report JSON (omit to skip SAST)
+  --blackduck FILE           Black Duck report JSON (file mode; omit to skip SCA)
+  --fortify FILE             Fortify report JSON (file mode; omit to skip SAST)
+  --blackduck-url URL        Black Duck base URL (LIVE mode; token via $BD_API_TOKEN)
+  --blackduck-project NAME   Black Duck project name (LIVE mode)
+  --blackduck-version NAME   Black Duck version name (LIVE mode; default main)
+  --fortify-url URL          Fortify SSC base URL (LIVE mode; token via $FORTIFY_TOKEN)
+  --fortify-app NAME         Fortify application name (LIVE mode)
+  --fortify-version NAME     Fortify application version (LIVE mode; default main)
   --req PATH                 requirements file, relative to root
   --severities LIST          e.g. critical,high (default) or add medium
   --test-cmd "…"             validation command (must exit 0)
@@ -60,9 +66,32 @@ python -m secfix
 
 Environment: `GITHUB_TOKEN` (required for `--open-pr`); `GITHUB_API_URL` is
 honoured for GitHub Enterprise / testing (defaults to `https://api.github.com`);
+`BD_URL`/`BD_API_TOKEN` and `SSC_URL`/`FORTIFY_TOKEN` for live scanner mode;
 optional Vertex AI vars `SECFIX_LLM_PROVIDER=vertex`,
 `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_CLOUD_PROJECT`, `VERTEX_LOCATION`,
 `VERTEX_MODEL`.
+
+### Live scanner API mode (real Black Duck / Fortify)
+
+Two ways to feed findings to secfix:
+
+| Mode | How | When |
+| --- | --- | --- |
+| **File** | `--blackduck report.json` / `--fortify report.json` | Your CI already runs the scanner CLI and emits JSON |
+| **Live** | `--blackduck-url … --blackduck-project …` (token in `$BD_API_TOKEN`); `--fortify-url … --fortify-app …` (token in `$FORTIFY_TOKEN`) | Let secfix pull findings straight from the scanner REST APIs |
+
+The live clients ([secfix/scanners/blackduck_client.py](../secfix/scanners/blackduck_client.py),
+[secfix/scanners/fortify_client.py](../secfix/scanners/fortify_client.py)) perform
+the real vendor auth handshakes (`POST /api/tokens/authenticate` → bearer for
+Black Duck; `Authorization: FortifyToken …` for SSC) and are covered by
+integration tests that mock each vendor's API
+([tests/test_scanner_clients.py](../tests/test_scanner_clients.py)).
+
+The shipped [security-fix.yml](../.github/workflows/security-fix.yml) **auto-selects**
+live mode when `BD_URL` / `SSC_URL` secrets exist, else uses the sample reports.
+To go live, add repo secrets `BD_URL`, `BD_API_TOKEN`, `SSC_URL`, `FORTIFY_TOKEN`
+(and optional repo *variables* `BD_PROJECT`, `BD_VERSION`, `FORTIFY_APP`,
+`FORTIFY_VERSION`). No code changes required.
 
 ## 3a. GitHub Actions — copy the workflow
 
