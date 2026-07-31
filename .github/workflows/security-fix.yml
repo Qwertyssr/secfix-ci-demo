@@ -31,33 +31,14 @@ jobs:
           python-version: "3.12"
 
       # ------------------------------------------------------------------
-      # 1) SECURITY SCAN
-      #    Replace the demo block below with your real scanners. Each scanner
-      #    must emit a JSON file the secfix adapters understand (see docs/REUSE.md).
+      # 1) SCAN SOURCE (no step needed)
+      #    LIVE mode: if the BD_URL / SSC_URL secrets are set, secfix pulls
+      #    findings directly from the real Black Duck / Fortify SSC REST APIs in
+      #    step 3. Otherwise it falls back to the committed sample reports so the
+      #    demo still runs. To instead run the scanner CLIs and emit JSON here:
+      #      # bash <(curl -s https://detect.blackduck.com/detect10.sh) ... > scan_reports/blackduck.json
+      #      # fortifyclient -url "$SSC_URL" -authtoken "$FORTIFY_TOKEN" listIssues ... > scan_reports/fortify.json
       # ------------------------------------------------------------------
-      - name: Security scan (Black Duck + Fortify)
-        run: |
-          mkdir -p scan_reports
-          # --- REAL BLACK DUCK (example) -------------------------------------
-          # bash <(curl -s https://detect.blackduck.com/detect10.sh) \
-          #   --blackduck.url="$BD_URL" --blackduck.api.token="$BD_TOKEN" \
-          #   --detect.project.name=secfix-ci-demo --detect.blackduck.signature.scanner.snippet.matching=NONE
-          # ./export-bd-vulns.sh > scan_reports/blackduck.json
-          #
-          # --- REAL FORTIFY (example) ---------------------------------------
-          # scancentral -sscurl "$SSC_URL" -ssctoken "$FORTIFY_TOKEN" start -upload \
-          #   -application secfix-ci-demo -version main -b build-id
-          # fortifyclient -url "$SSC_URL" -authtoken "$FORTIFY_TOKEN" \
-          #   listIssues -application secfix-ci-demo -applicationVersion main -outputFormat json \
-          #   > scan_reports/fortify.json
-          #
-          # --- DEMO: the repo already ships sample reports in scan_reports/ ---
-          test -f scan_reports/blackduck.json && test -f scan_reports/fortify.json
-        env:
-          BD_URL: ${{ secrets.BD_URL }}
-          BD_TOKEN: ${{ secrets.BD_API_TOKEN }}
-          SSC_URL: ${{ secrets.SSC_URL }}
-          FORTIFY_TOKEN: ${{ secrets.FORTIFY_TOKEN }}
 
       # ------------------------------------------------------------------
       # 2) (Optional) Enable AI-assisted SAST fixes via Vertex AI.
@@ -85,23 +66,42 @@ jobs:
           python -m pip install --quiet "google-cloud-aiplatform>=1.60"
 
       # ------------------------------------------------------------------
-      # 3) RUN THE AGENT: fix + validate + open PR
+      # 3) RUN THE AGENT: (live API or sample file) -> fix -> validate -> PR
       # ------------------------------------------------------------------
       - name: secfix — auto-fix and open PR
-        run: |
-          python -m secfix \
-            --root . \
-            --blackduck scan_reports/blackduck.json \
-            --fortify scan_reports/fortify.json \
-            --req sample_app/requirements.txt \
-            --severities critical,high \
-            --test-cmd "python -m unittest discover -s sample_app/tests" \
-            --base "${{ github.ref_name }}" \
-            --repo "${{ github.repository }}" \
-            --pr-body-out pr-body.md \
-            --open-pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BD_URL: ${{ secrets.BD_URL }}
+          BD_API_TOKEN: ${{ secrets.BD_API_TOKEN }}
+          BD_PROJECT: ${{ vars.BD_PROJECT }}
+          BD_VERSION: ${{ vars.BD_VERSION }}
+          SSC_URL: ${{ secrets.SSC_URL }}
+          FORTIFY_TOKEN: ${{ secrets.FORTIFY_TOKEN }}
+          FORTIFY_APP: ${{ vars.FORTIFY_APP }}
+          FORTIFY_VERSION: ${{ vars.FORTIFY_VERSION }}
+        run: |
+          args=(--root . --req sample_app/requirements.txt --severities critical,high)
+          args+=(--test-cmd "python -m unittest discover -s sample_app/tests")
+          args+=(--base "${{ github.ref_name }}" --repo "${{ github.repository }}")
+          args+=(--pr-body-out pr-body.md --open-pr)
+
+          if [ -n "$BD_URL" ]; then
+            echo "Black Duck: LIVE ($BD_URL)"
+            args+=(--blackduck-url "$BD_URL" --blackduck-project "${BD_PROJECT:-secfix-ci-demo}" --blackduck-version "${BD_VERSION:-main}")
+          else
+            echo "Black Duck: sample report"
+            args+=(--blackduck scan_reports/blackduck.json)
+          fi
+
+          if [ -n "$SSC_URL" ]; then
+            echo "Fortify: LIVE ($SSC_URL)"
+            args+=(--fortify-url "$SSC_URL" --fortify-app "${FORTIFY_APP:-secfix-ci-demo}" --fortify-version "${FORTIFY_VERSION:-main}")
+          else
+            echo "Fortify: sample report"
+            args+=(--fortify scan_reports/fortify.json)
+          fi
+
+          python -m secfix "${args[@]}"
 
       - name: Upload PR body artifact
         if: always()

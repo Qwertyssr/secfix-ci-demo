@@ -17,7 +17,7 @@ from .fixers import Patch
 from .fixers.code import fix_code_finding
 from .fixers.deps import bump_requirements
 from .models import Finding
-from .normalize import load_reports
+from .scanners.gather import collect_findings
 from . import validate as _validate
 from . import git_ops, github_pr, gitlab_mr
 
@@ -69,8 +69,16 @@ def _build_pr_body(fixed: List[Patch], escalated: List[Finding], validation: str
 def run(argv: List[str]) -> int:
     ap = argparse.ArgumentParser(prog="secfix", description="CI security auto-fix agent")
     ap.add_argument("--root", default=".", help="repository root to operate on")
-    ap.add_argument("--blackduck", help="path to Black Duck report JSON")
-    ap.add_argument("--fortify", help="path to Fortify report JSON")
+    ap.add_argument("--blackduck", help="path to Black Duck report JSON (file mode)")
+    ap.add_argument("--fortify", help="path to Fortify report JSON (file mode)")
+    # --- live API mode (Black Duck) ---
+    ap.add_argument("--blackduck-url", default="", help="Black Duck base URL (live mode; token via $BD_API_TOKEN)")
+    ap.add_argument("--blackduck-project", default="", help="Black Duck project name (live mode)")
+    ap.add_argument("--blackduck-version", default="main", help="Black Duck version name (live mode)")
+    # --- live API mode (Fortify SSC) ---
+    ap.add_argument("--fortify-url", default="", help="Fortify SSC base URL (live mode; token via $FORTIFY_TOKEN)")
+    ap.add_argument("--fortify-app", default="", help="Fortify application name (live mode)")
+    ap.add_argument("--fortify-version", default="main", help="Fortify application version (live mode)")
     ap.add_argument("--req", default="requirements.txt", help="requirements file path (relative to root)")
     ap.add_argument("--severities", default="critical,high,medium",
                     help="comma list of severities to auto-fix")
@@ -91,7 +99,7 @@ def run(argv: List[str]) -> int:
     args = ap.parse_args(argv)
 
     allowed = [s.strip().lower() for s in args.severities.split(",") if s.strip()]
-    findings = load_reports(args.blackduck, args.fortify)
+    findings = collect_findings(args)
     actionable = [f for f in findings if _severity_ok(f, allowed)]
     actionable.sort(key=lambda f: f.severity_rank())
 

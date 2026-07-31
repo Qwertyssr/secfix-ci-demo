@@ -16,4 +16,4 @@ vertex = ["google-cloud-aiplatform>=1.60"]   # only for AI-assisted SAST fixes
 secfix = "secfix.cli:main"
 
 [tool.setuptools]
-packages = ["secfix", "secfix.fixers"]
+packages = ["secfix", "secfix.fixers", "secfix.scanners"]
