@@ -1,0 +1,46 @@
+{
+  "_meta": { "scanner": "blackduck", "note": "Multi-ecosystem: npm, maven, go (origin id prefix drives routing)" },
+  "totalCount": 5,
+  "items": [
+    {
+      "componentName": "lodash", "componentVersionName": "4.17.11",
+      "componentVersionOriginId": "npmjs:lodash:4.17.11",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2021-23337", "severity": "HIGH",
+        "overallScore": 7.2, "solution": "Upgrade to 4.17.21 or later"
+      }
+    },
+    {
+      "componentName": "minimist", "componentVersionName": "1.2.0",
+      "componentVersionOriginId": "npmjs:minimist:1.2.0",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2021-44906", "severity": "CRITICAL",
+        "overallScore": 9.8, "solution": "Upgrade to 1.2.6 or later"
+      }
+    },
+    {
+      "componentName": "log4j-core", "componentVersionName": "2.14.1",
+      "componentVersionOriginId": "maven:org.apache.logging.log4j:log4j-core:2.14.1",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2021-44228", "severity": "CRITICAL",
+        "overallScore": 10.0, "solution": "Upgrade to 2.17.1 or later"
+      }
+    },
+    {
+      "componentName": "commons-collections", "componentVersionName": "3.2.1",
+      "componentVersionOriginId": "maven:commons-collections:commons-collections:3.2.1",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2015-6420", "severity": "HIGH",
+        "overallScore": 7.5, "solution": "Upgrade to 3.2.2 or later"
+      }
+    },
+    {
+      "componentName": "gopkg.in/yaml.v2", "componentVersionName": "2.2.2",
+      "componentVersionOriginId": "golang:gopkg.in/yaml.v2:2.2.2",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2019-11254", "severity": "MEDIUM",
+        "overallScore": 5.3, "solution": "Upgrade to 2.2.8 or later"
+      }
+    }
+  ]
+}

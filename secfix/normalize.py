@@ -23,10 +23,28 @@ def _parse_fixed_version(solution: str | None) -> str | None:
     return m.group(1) if m else None
 
 
+# Black Duck origin-id prefix -> ecosystem for SCA routing.
+_ECOSYSTEM_PREFIX = {
+    "pypi": "python",
+    "npmjs": "npm",
+    "npm": "npm",
+    "maven": "maven",
+    "golang": "go",
+    "go": "go",
+}
+
+
+def _ecosystem_from_origin(origin: str | None) -> str | None:
+    if not origin or ":" not in origin:
+        return None
+    return _ECOSYSTEM_PREFIX.get(origin.split(":", 1)[0].lower())
+
+
 def normalize_blackduck(report: dict) -> List[Finding]:
     findings: List[Finding] = []
     for item in report.get("items", []):
         vr = item.get("vulnerabilityWithRemediation", {})
+        origin = item.get("componentVersionOriginId", "")
         findings.append(
             Finding(
                 scanner="blackduck",
@@ -37,7 +55,8 @@ def normalize_blackduck(report: dict) -> List[Finding]:
                 component=item.get("componentName"),
                 current_version=item.get("componentVersionName"),
                 fixed_version=_parse_fixed_version(vr.get("solution")),
-                raw_ref=item.get("componentVersionOriginId"),
+                ecosystem=_ecosystem_from_origin(origin),
+                raw_ref=origin,
                 extra={"cvss": vr.get("overallScore")},
             )
         )

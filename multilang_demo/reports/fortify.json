@@ -1,0 +1,9 @@
+{
+  "_meta": { "scanner": "fortify", "note": "Weak-hash SAST findings across JS, Java, Go" },
+  "count": 3,
+  "data": [
+    { "id": 1, "issueInstanceId": "ML-JS-MD5",   "category": "Weak Cryptographic Hash", "friority": "High", "fullFileName": "crypto_util.js", "lineNumber": 5 },
+    { "id": 2, "issueInstanceId": "ML-JAVA-MD5", "category": "Weak Cryptographic Hash", "friority": "High", "fullFileName": "Hasher.java",     "lineNumber": 8 },
+    { "id": 3, "issueInstanceId": "ML-GO-MD5",   "category": "Weak Cryptographic Hash", "friority": "High", "fullFileName": "hash.go",         "lineNumber": 10 }
+  ]
+}

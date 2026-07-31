@@ -117,6 +117,20 @@ proves the agent fixes the 4 verifiable issues and **escalates the other 9**
 into the PR body instead of guessing. See
 [docs/REFERENCE.md §7](docs/REFERENCE.md#7-hard-cases--escalation-tested).
 
+### Multiple languages
+
+secfix isn't Python-only. [multilang_demo/](multilang_demo) contains a polyglot
+project (npm `package.json`, Maven `pom.xml`, Go `go.mod`, plus JavaScript, Java
+and Go source). [tests/test_multilang.py](tests/test_multilang.py) proves the
+agent bumps **npm + Maven + Go** dependencies and applies the **weak-hash fix in
+JavaScript, Java and Go** — leaving unrelated entries untouched:
+
+```text
+[deps] lodash 4.17.11 -> 4.17.21 (npm)      [deps] log4j-core 2.14.1 -> 2.17.1 (maven)
+[deps] minimist 1.2.0 -> 1.2.6  (npm)       [deps] gopkg.in/yaml.v2 2.2.2 -> 2.2.8 (go)
+[rule] fixed Weak Cryptographic Hash in crypto_util.js / Hasher.java / hash.go
+```
+
 ### Testing the pipeline without a GitHub runner
 
 `tests/test_pipeline_e2e.py` reproduces the whole CI job locally: it builds a git
@@ -126,8 +140,8 @@ does — then asserts the fixes were applied, a `secfix/auto-*` branch was pushe
 and the PR was created with the right base/head/body. All suites pass locally:
 
 ```text
-tests/ (agent + scanner-clients + pipeline + hard)   13 tests   OK
-sample_app/tests                                      4 tests   OK
+tests/ (agent + scanner-clients + pipeline + hard + multilang)   14 tests   OK
+sample_app/tests                                                  4 tests   OK
 workflow YAML   ci.yml, security-fix.yml, action.yml  parse OK
 ```
 

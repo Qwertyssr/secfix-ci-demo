@@ -168,24 +168,33 @@ otherwise it reads the `--blackduck`/`--fortify` file.
 ## 6. Fix strategies
 
 ### 6.1 SCA — dependency bumper (`fixers/deps.py`)
-Parses `requirements.txt`, matches vulnerable components (name-normalized:
-`PyYAML` == `pyyaml`), and rewrites `name==version` → the fixed version. All
-dependency bumps become **one** patch (one coherent diff for the reviewer).
-Untouched lines are preserved byte-for-byte.
+Bumps vulnerable dependency versions across **four ecosystems**, routed by the
+Black Duck origin-id prefix (`pypi`/`npmjs`/`maven`/`golang` →
+`python`/`npm`/`maven`/`go`), which `normalize_blackduck` stores on
+`Finding.ecosystem`:
 
-- **Multiple CVEs on one component** → the **highest** fixed version wins
-  (`_ver_key` numeric sort). Example from the hard test: PyYAML has CVE-2020-1747
-  (→5.3.1) and CVE-2020-14343 (→5.4); secfix bumps to **5.4**.
-- **Transitive / not-in-manifest** components → **escalated** (can't bump a line
-  that isn't there).
+| Ecosystem | Manifest | How it's edited |
+| --- | --- | --- |
+| Python | `requirements.txt` | rewrite `name==version` |
+| npm | `package.json` | update the version in `dependencies`/`devDependencies` (preserving a `^`/`~` prefix) |
+| Maven | `pom.xml` | replace the `<version>` inside the matching `<artifactId>` block |
+| Go | `go.mod` | replace the version on the matching `require` line |
+
+`apply_dependency_fixes()` groups findings by ecosystem, edits each manifest
+present, and returns **one** patch spanning all of them. Untouched entries
+(project version, unrelated modules) are preserved.
+
+- **Multiple CVEs on one component** → the **highest** fixed version wins.
+- **Transitive / not-in-manifest** components → **escalated**.
 - **No fixed version** available → **escalated**.
 
-Before / after:
-```diff
-- PyYAML==5.3
-- requests==2.19.1
-+ PyYAML==5.4
-+ requests==2.20.0
+Real polyglot run (from [tests/test_multilang.py](../tests/test_multilang.py)):
+```text
+[deps] lodash 4.17.11 -> 4.17.21          (npm)
+[deps] minimist 1.2.0 -> 1.2.6            (npm)
+[deps] log4j-core 2.14.1 -> 2.17.1        (maven)
+[deps] commons-collections 3.2.1 -> 3.2.2 (maven)
+[deps] gopkg.in/yaml.v2 2.2.2 -> 2.2.8    (go)
 ```
 
 ### 6.2 SAST — deterministic rules (`fixers/rules.py`)
@@ -193,7 +202,7 @@ Trusted, behaviour-preserving templates for well-understood categories:
 
 | Category | Transformation | Example |
 | --- | --- | --- |
-| Weak Cryptographic Hash | `hashlib.md5/sha1(` → `hashlib.sha256(` | `hashlib.md5(x)` → `hashlib.sha256(x)` |
+| Weak Cryptographic Hash | weak hash → SHA-256, **across Python/JS/Java/Go** | `hashlib.md5(`→`hashlib.sha256(`; `createHash('md5')`→`'sha256'`; `getInstance("MD5")`→`"SHA-256"`; Go `crypto/md5`+`md5.Sum(`→`crypto/sha256`+`sha256.Sum256(` |
 | Insecure Deserialization | `yaml.load(x, Loader=…)` → `yaml.safe_load(x)` | drops the unsafe `Loader=` |
 | Command Injection | concat command + `shell=True` → arg list, no shell | `subprocess.call(cmd, shell=True)` → `subprocess.call(cmd)` with `cmd=[…]` |
 | SQL Injection | `"… '" + v + "'"` → `"… ?", (v,)` | parameterized query |
@@ -422,7 +431,9 @@ All run offline. `ci.yml` runs them on every push/PR.
   Mitigation: the workflow's `paths-ignore` avoids re-running on docs/test
   changes; close superseded PRs, or add a state store to correlate by
   fingerprint.
-- **Rule engine is Python-specific**; other languages rely on the Vertex AI
-  provider (still validated by your `--test-cmd`).
-- **Dependency bumping targets `requirements.txt`**; other manifests need a
-  bumper (see §15).
+- **SAST rules are pattern-based**: the weak-hash rule spans Python/JS/Java/Go,
+  but the other rules (yaml, command, SQL) are Python-specific. Other
+  languages/categories rely on the Vertex AI provider (still validated by your
+  `--test-cmd`) or are escalated.
+- **Dependency bumping covers requirements.txt, package.json, pom.xml, go.mod**;
+  other manifests (Gradle, `.csproj`, Pipfile) need a bumper (see §15).

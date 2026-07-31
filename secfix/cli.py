@@ -15,7 +15,7 @@ from typing import List
 from . import __version__
 from .fixers import Patch
 from .fixers.code import fix_code_finding
-from .fixers.deps import bump_requirements
+from .fixers.deps import apply_dependency_fixes
 from .models import Finding
 from .scanners.gather import collect_findings
 from . import validate as _validate
@@ -109,8 +109,8 @@ def run(argv: List[str]) -> int:
     fixed: List[Patch] = []
     escalated: List[Finding] = []
 
-    # --- SCA: one grouped requirements bump ---
-    dep_patch = bump_requirements(args.root, actionable, req_file=args.req)
+    # --- SCA: one grouped bump across every supported manifest ---
+    dep_patch = apply_dependency_fixes(args.root, actionable, req_file=args.req)
     bumped_components = set()
     if dep_patch:
         _apply(args.root, dep_patch)

@@ -21,6 +21,7 @@ class Finding:
     component: Optional[str] = None     # e.g. "PyYAML"
     current_version: Optional[str] = None
     fixed_version: Optional[str] = None
+    ecosystem: Optional[str] = None     # python | npm | maven | go (SCA routing)
     raw_ref: Optional[str] = None
     extra: dict = field(default_factory=dict)
 
