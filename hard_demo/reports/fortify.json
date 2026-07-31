@@ -1,0 +1,14 @@
+{
+  "_meta": { "scanner": "fortify", "note": "HARD cases: categories the rule engine cannot safely auto-fix" },
+  "count": 8,
+  "data": [
+    { "id": 1, "issueInstanceId": "H-MD5",   "category": "Weak Cryptographic Hash",        "friority": "High",     "fullFileName": "app.py", "lineNumber": 17 },
+    { "id": 2, "issueInstanceId": "H-CMD",   "category": "Command Injection",              "friority": "Critical", "fullFileName": "app.py", "lineNumber": 23 },
+    { "id": 3, "issueInstanceId": "H-PATH",  "category": "Path Manipulation",              "friority": "High",     "fullFileName": "app.py", "lineNumber": 28 },
+    { "id": 4, "issueInstanceId": "H-PICKLE","category": "Insecure Deserialization",       "friority": "Critical", "fullFileName": "app.py", "lineNumber": 33 },
+    { "id": 5, "issueInstanceId": "H-SQLI",  "category": "SQL Injection",                  "friority": "Critical", "fullFileName": "app.py", "lineNumber": 38 },
+    { "id": 6, "issueInstanceId": "H-EVAL",  "category": "Dynamic Code Evaluation",        "friority": "Critical", "fullFileName": "app.py", "lineNumber": 43 },
+    { "id": 7, "issueInstanceId": "H-XXE",   "category": "XML External Entity Injection",  "friority": "High",     "fullFileName": "app.py", "lineNumber": 48 },
+    { "id": 8, "issueInstanceId": "H-SECRET","category": "Hardcoded Password",             "friority": "High",     "fullFileName": "app.py", "lineNumber": 52 }
+  ]
+}

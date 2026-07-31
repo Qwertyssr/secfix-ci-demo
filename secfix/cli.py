@@ -111,11 +111,19 @@ def run(argv: List[str]) -> int:
 
     # --- SCA: one grouped requirements bump ---
     dep_patch = bump_requirements(args.root, actionable, req_file=args.req)
+    bumped_components = set()
     if dep_patch:
         _apply(args.root, dep_patch)
         fixed.append(dep_patch)
         for f in getattr(dep_patch, "extra_findings", []):
+            bumped_components.add((f.component or "").lower())
             print(f"  [deps] {f.component} {f.current_version} -> {f.fixed_version} ({f.cve})")
+    # dependency findings we could not bump (transitive / not in manifest / no fix) -> escalate
+    for f in actionable:
+        if f.type == "dependency_vuln" and (f.component or "").lower() not in bumped_components:
+            escalated.append(f)
+            reason = "no fixed version" if not f.fixed_version else "not a direct dependency"
+            print(f"  [escalate] {f.component} {f.cve} ({reason})")
 
     # --- SAST: per-finding code fix ---
     for f in actionable:

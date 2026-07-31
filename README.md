@@ -96,8 +96,26 @@ py -m secfix --root . \
 The pipeline in [.github/workflows/security-fix.yml](.github/workflows/security-fix.yml)
 runs the scan, then the agent with `--open-pr`. A second workflow,
 [.github/workflows/ci.yml](.github/workflows/ci.yml), runs the agent/sample/pipeline
-tests on every push. See [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) for the full
-flow and [docs/REUSE.md](docs/REUSE.md) to drop it into another repo's pipeline.
+tests on every push.
+
+### Documentation
+
+| Doc | Contents |
+| --- | --- |
+| [docs/REFERENCE.md](docs/REFERENCE.md) | **Complete reference** — every module, the `Finding` model, fixers, live API clients, validation, publishers, all CLI flags, exit codes, hard-case behaviour, testing, security |
+| [docs/INTEGRATION.md](docs/INTEGRATION.md) | **Black Duck + Fortify + CI/CD integration** — live vs file mode, tokens/endpoints, GitHub/GitLab/Jenkins, Vertex AI, troubleshooting |
+| [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) | flow diagrams and pipeline internals |
+| [docs/REUSE.md](docs/REUSE.md) | quick cheatsheet to drop it into another repo |
+
+### Hard / complex scans
+
+[hard_demo/](hard_demo) contains fixtures with vulnerability classes the agent
+**cannot safely auto-fix** (XXE, SSRF, pickle, eval, path traversal, hardcoded
+secret, f-string SQLi) plus tricky SCA cases (multi-CVE component, transitive
+dep, no-fix-available). [tests/test_hard_cases.py](tests/test_hard_cases.py)
+proves the agent fixes the 4 verifiable issues and **escalates the other 9**
+into the PR body instead of guessing. See
+[docs/REFERENCE.md §7](docs/REFERENCE.md#7-hard-cases--escalation-tested).
 
 ### Testing the pipeline without a GitHub runner
 
@@ -108,10 +126,9 @@ does — then asserts the fixes were applied, a `secfix/auto-*` branch was pushe
 and the PR was created with the right base/head/body. All suites pass locally:
 
 ```text
-tests.test_agent          7 tests   OK
-tests.test_pipeline_e2e   1 test    OK   (branch pushed + PR POSTed)
-sample_app/tests          4 tests   OK
-workflow YAML             ci.yml, security-fix.yml, action.yml  parse OK
+tests/ (agent + scanner-clients + pipeline + hard)   13 tests   OK
+sample_app/tests                                      4 tests   OK
+workflow YAML   ci.yml, security-fix.yml, action.yml  parse OK
 ```
 
 ## Security notes

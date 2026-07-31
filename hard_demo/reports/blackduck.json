@@ -1,0 +1,47 @@
+{
+  "_meta": { "scanner": "blackduck", "note": "HARD cases: multi-CVE component, transitive dep, no-fix" },
+  "totalCount": 5,
+  "items": [
+    {
+      "componentName": "PyYAML", "componentVersionName": "5.3",
+      "componentVersionOriginId": "pypi:PyYAML:5.3",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2020-1747", "severity": "CRITICAL",
+        "overallScore": 9.8, "solution": "Upgrade to 5.3.1 or later"
+      }
+    },
+    {
+      "componentName": "PyYAML", "componentVersionName": "5.3",
+      "componentVersionOriginId": "pypi:PyYAML:5.3",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2020-14343", "severity": "CRITICAL",
+        "overallScore": 9.8, "solution": "Upgrade to 5.4 or later"
+      }
+    },
+    {
+      "componentName": "requests", "componentVersionName": "2.19.1",
+      "componentVersionOriginId": "pypi:requests:2.19.1",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2018-18074", "severity": "HIGH",
+        "overallScore": 8.1, "solution": "Upgrade to 2.20.0 or later"
+      }
+    },
+    {
+      "componentName": "certifi", "componentVersionName": "2019.6.16",
+      "componentVersionOriginId": "pypi:certifi:2019.6.16",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2022-23491", "severity": "HIGH",
+        "overallScore": 7.5, "solution": "Upgrade to 2022.12.07 or later"
+      }
+    },
+    {
+      "componentName": "legacy-cipher", "componentVersionName": "1.0.0",
+      "componentVersionOriginId": "pypi:legacy-cipher:1.0.0",
+      "vulnerabilityWithRemediation": {
+        "vulnerabilityName": "CVE-2021-99999", "severity": "CRITICAL",
+        "overallScore": 9.1, "remediationStatus": "NEW",
+        "solution": "No fix available; consider replacing the component"
+      }
+    }
+  ]
+}

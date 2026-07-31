@@ -16,6 +16,11 @@ def _normalize(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
+def _ver_key(v: str) -> tuple:
+    """Coarse version sort key: numeric groups only (e.g. '2.10.1' -> (2,10,1))."""
+    return tuple(int(x) for x in re.findall(r"\d+", v or ""))
+
+
 def bump_requirements(app_dir: str, findings: List[Finding], req_file: str = "requirements.txt") -> Optional[Patch]:
     """Return a single Patch bumping every fixable dependency finding.
 
@@ -32,7 +37,11 @@ def bump_requirements(app_dir: str, findings: List[Finding], req_file: str = "re
     wanted = {}
     for f in findings:
         if f.type == "dependency_vuln" and f.component and f.fixed_version:
-            wanted[_normalize(f.component)] = f
+            key = _normalize(f.component)
+            prev = wanted.get(key)
+            # when a component has multiple CVEs, target the highest fixed version
+            if prev is None or _ver_key(f.fixed_version) > _ver_key(prev.fixed_version):
+                wanted[key] = f
 
     if not wanted:
         return None

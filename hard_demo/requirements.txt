@@ -1,0 +1,4 @@
+# Direct dependencies for the hard stress test.
+# (certifi / pillow are reported by Black Duck but are NOT here -> transitive/no-fix cases)
+PyYAML==5.3
+requests==2.19.1
