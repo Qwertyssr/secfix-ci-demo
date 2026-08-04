@@ -8,4 +8,4 @@ import yaml
 
 def load_config(raw_yaml: str) -> dict:
     # VULN (Fortify: Insecure Deserialization) -> should become yaml.safe_load
-    return yaml.load(raw_yaml, Loader=yaml.Loader)
+    return yaml.safe_load(raw_yaml)
