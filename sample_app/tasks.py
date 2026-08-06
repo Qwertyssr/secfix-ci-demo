@@ -8,5 +8,5 @@ import subprocess
 
 def run_report(report_name: str) -> int:
     # VULN (Fortify: Command Injection) -> shell=True with interpolated input
-    cmd = "python generate_report.py --name " + report_name
-    return subprocess.call(cmd, shell=True)
+    cmd = ["python", "generate_report.py", "--name", report_name]
+    return subprocess.call(cmd)
