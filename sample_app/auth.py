@@ -8,7 +8,7 @@ import hashlib
 
 def hash_password(password: str, salt: str) -> str:
     # VULN (Fortify: Weak Cryptographic Hash) -> should become sha256
-    digest = hashlib.md5((salt + password).encode("utf-8"))
+    digest = hashlib.sha256((salt + password).encode("utf-8"))
     return digest.hexdigest()
 
 
