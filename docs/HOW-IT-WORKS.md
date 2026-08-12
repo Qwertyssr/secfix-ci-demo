@@ -103,7 +103,8 @@ Uses only the standard library (`urllib`) — no third-party HTTP dependency.
 
 Two GitHub Actions workflows ship with the repo:
 
-- **`.github/workflows/security-fix.yml`** — the real pipeline: scan → fix → PR.
+- **`.github/workflows/security-fix.yml`** — the real pipeline: scan → secfix
+   check → conditional fix PR.
 - **`.github/workflows/ci.yml`** — runs the agent, sample, and pipeline tests on
   every push/PR (the "does the tool itself work" gate).
 

@@ -61,6 +61,7 @@ python -m secfix
   --repo owner/name          GitHub repo (defaults to $GITHUB_REPOSITORY)
   --open-pr                  commit, push and open the PR
   --pr-body-out FILE         write the PR markdown body
+  --check-only               write has_vulnerabilities/finding_count outputs and stop
   --fail-on-findings         exit 2 if any actionable findings were present
 ```
 
@@ -87,11 +88,11 @@ Black Duck; `Authorization: FortifyToken …` for SSC) and are covered by
 integration tests that mock each vendor's API
 ([tests/test_scanner_clients.py](../tests/test_scanner_clients.py)).
 
-The shipped [security-fix.yml](../.github/workflows/security-fix.yml) **auto-selects**
-live mode when `BD_URL` / `SSC_URL` secrets exist, else uses the sample reports.
-To go live, add repo secrets `BD_URL`, `BD_API_TOKEN`, `SSC_URL`, `FORTIFY_TOKEN`
-(and optional repo *variables* `BD_PROJECT`, `BD_VERSION`, `FORTIFY_APP`,
-`FORTIFY_VERSION`). No code changes required.
+The shipped [security-fix.yml](../.github/workflows/security-fix.yml) is a simple
+demo pipeline: committed sample reports stand in for Black Duck/Fortify output,
+`secfix --check-only` gates the job, and `secfix --open-pr` runs only when
+actionable vulnerabilities exist. To go live, replace the demo scan step with
+your scanner exports or use the live API flags above.
 
 ## 3a. GitHub Actions — copy the workflow
 
@@ -112,7 +113,14 @@ jobs:
           your-blackduck-export > scan_reports/blackduck.json
           your-fortify-export   > scan_reports/fortify.json
       - run: pip install git+https://github.com/<owner>/secfix-ci-demo@main
-      - run: |
+      - id: secfix-check
+        run: |
+          python -m secfix --check-only \
+            --blackduck scan_reports/blackduck.json \
+            --fortify scan_reports/fortify.json \
+            --severities critical,high
+      - if: steps.secfix-check.outputs.has_vulnerabilities == 'true'
+        run: |
           python -m secfix --root . \
             --blackduck scan_reports/blackduck.json \
             --fortify   scan_reports/fortify.json \

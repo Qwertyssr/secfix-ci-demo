@@ -57,7 +57,7 @@ secfix-ci-demo/
 │   ├── test_pipeline_e2e.py        full pipeline vs mock GitHub + bare git remote
 │   └── test_hard_cases.py          hard/complex scan stress test
 └── .github/
-    ├── workflows/security-fix.yml  scan → fix → PR (auto-selects live vs file)
+  ├── workflows/security-fix.yml  scan → secfix check → conditional fix PR
     ├── workflows/ci.yml            runs all test suites on push/PR
     └── actions/secfix/action.yml   reusable composite action
 ```
@@ -327,7 +327,17 @@ set, else GitHub. Branch is `secfix/auto-<timestamp>`; labels `security`,
 --gitlab-url URL           GitLab base URL (default $CI_SERVER_URL)
 --open-pr                  commit, push and open the PR/MR
 --pr-body-out FILE         write the PR/MR body markdown
+--check-only               only report whether actionable findings exist;
+                           writes has_vulnerabilities and finding_count to $GITHUB_OUTPUT
 --fail-on-findings         exit 2 if actionable findings were present
+```
+
+### Example — CI gate only
+```bash
+python -m secfix --check-only \
+  --blackduck scan_reports/blackduck.json \
+  --fortify scan_reports/fortify.json \
+  --severities critical,high
 ```
 
 ### Example — file mode, report only (no PR)

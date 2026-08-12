@@ -10,8 +10,10 @@ There are two ways to feed findings to secfix. Pick per scanner — you can mix.
 | **Live API** | give secfix a base URL + token | it queries the scanner REST API directly |
 | **File** | run the scanner CLI, emit JSON | it reads the JSON file |
 
-secfix's shipped GitHub workflow **auto-selects** live mode when the `BD_URL` /
-`SSC_URL` secrets exist, else it uses committed sample reports.
+The demo repo's shipped GitHub workflow uses committed sample reports for now,
+then lets `secfix --check-only` decide whether the fixing/PR step should run.
+For a real pipeline, replace that scan step with your Black Duck/Fortify export
+or call secfix in live API mode.
 
 ---
 
@@ -127,15 +129,25 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install git+https://github.com/<owner>/secfix-ci-demo@main
-      - name: secfix (live)
+      - name: Run security scans
+        run: |
+          your-blackduck-export > scan_reports/blackduck.json
+          your-fortify-export   > scan_reports/fortify.json
+      - name: Check vulnerabilities with secfix
+        id: secfix-check
+        run: |
+          python -m secfix --check-only --root . \
+            --blackduck scan_reports/blackduck.json \
+            --fortify scan_reports/fortify.json \
+            --severities critical,high
+      - name: secfix fix and PR
+        if: steps.secfix-check.outputs.has_vulnerabilities == 'true'
         env:
           GITHUB_TOKEN:   ${{ secrets.GITHUB_TOKEN }}
-          BD_API_TOKEN:   ${{ secrets.BD_API_TOKEN }}
-          FORTIFY_TOKEN:  ${{ secrets.FORTIFY_TOKEN }}
         run: |
           python -m secfix --root . \
-            --blackduck-url ${{ secrets.BD_URL }} --blackduck-project my-service \
-            --fortify-url   ${{ secrets.SSC_URL }} --fortify-app     my-service \
+            --blackduck scan_reports/blackduck.json \
+            --fortify scan_reports/fortify.json \
             --req requirements.txt --severities critical,high \
             --test-cmd "python -m pytest -q" \
             --base "${{ github.ref_name }}" --repo "${{ github.repository }}" --open-pr
@@ -167,8 +179,9 @@ jobs:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-> The demo repo's [security-fix.yml](../.github/workflows/security-fix.yml) already
-> auto-selects live vs file and guards against loops — copy it as a starting point.
+> The demo repo's [security-fix.yml](../.github/workflows/security-fix.yml) is the
+> simplest starting point: scan reports, `secfix --check-only`, then conditional
+> `secfix --open-pr`.
 
 ---
 
