@@ -101,12 +101,10 @@ Uses only the standard library (`urllib`) — no third-party HTTP dependency.
 
 ## Testing the pipeline locally
 
-Two GitHub Actions workflows ship with the repo:
+One GitHub Actions workflow ships with the repo:
 
 - **`.github/workflows/security-fix.yml`** — the real pipeline: scan → secfix
-   check → conditional fix PR.
-- **`.github/workflows/ci.yml`** — runs the agent, sample, and pipeline tests on
-  every push/PR (the "does the tool itself work" gate).
+   fix PR when the scan reports vulnerabilities.
 
 Because a GitHub runner isn't always available, `tests/test_pipeline_e2e.py`
 reproduces the pipeline **mechanism** end to end, offline:

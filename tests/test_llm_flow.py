@@ -77,6 +77,23 @@ class LlmFlow(unittest.TestCase):
         patch = code_mod.fix_code_finding(self.tmp, finding)
         self.assertEqual(patch.provider, "rule")
 
+    def test_context_window_limits_llm_input(self):
+        content = "".join(f"line {i}\n" for i in range(1, 101))
+        start, end, snippet = sast_mod._context_window(content, 50)
+
+        self.assertEqual((start, end), (30, 70))
+        self.assertIn("line 50\n", snippet)
+        self.assertNotIn("line 29\n", snippet)
+        self.assertNotIn("line 71\n", snippet)
+
+    def test_replace_window_keeps_content_outside_llm_context(self):
+        content = "".join(f"line {i}\n" for i in range(1, 8))
+        updated = sast_mod._replace_window(content, 3, 5, "fixed 3\nfixed 4\n")
+
+        self.assertTrue(updated.startswith("line 1\nline 2\n"))
+        self.assertIn("fixed 3\nfixed 4\n", updated)
+        self.assertTrue(updated.endswith("line 6\nline 7\n"))
+
 
 if __name__ == "__main__":
     unittest.main()

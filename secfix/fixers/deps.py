@@ -28,6 +28,18 @@ def _ver_key(v: str) -> tuple:
     return tuple(int(x) for x in re.findall(r"\d+", v or ""))
 
 
+def _same_version(actual: str | None, reported: str | None) -> bool:
+    if not actual or not reported:
+        return False
+    actual = actual.strip()
+    if actual[:1] in "^~":
+        actual = actual[1:]
+    actual = actual[1:] if actual.startswith("v") else actual
+    reported = reported.strip()
+    reported = reported[1:] if reported.startswith("v") else reported
+    return actual == reported
+
+
 def _highest(findings: List[Finding]) -> List[Finding]:
     """De-duplicate by component, keeping the highest fixed version."""
     best: Dict[str, Finding] = {}
@@ -48,8 +60,8 @@ def _bump_requirements_content(content: str, findings: List[Finding]) -> Tuple[s
     out_lines: List[str] = []
     for line in content.splitlines():
         m = _REQ_RE.match(line.strip())
-        if m and _normalize(m.group("name")) in wanted:
-            f = wanted[_normalize(m.group("name"))]
+        f = wanted.get(_normalize(m.group("name"))) if m else None
+        if f and _same_version(m.group("version"), f.current_version):
             out_lines.append(f"{m.group('name')}=={f.fixed_version}{m.group('rest')}")
             changed.append(f)
         else:
@@ -70,7 +82,7 @@ def _bump_package_json_content(content: str, findings: List[Finding]) -> Tuple[s
             continue
         for name, spec in list(deps.items()):
             f = wanted.get(name)
-            if f:
+            if f and _same_version(spec, f.current_version):
                 prefix = spec[0] if isinstance(spec, str) and spec[:1] in "^~" else ""
                 deps[name] = prefix + f.fixed_version
                 changed.append(f)
@@ -86,8 +98,18 @@ def _bump_pom_content(content: str, findings: List[Finding]) -> Tuple[str, List[
         rx = re.compile(
             r"(<artifactId>\s*" + art + r"\s*</artifactId>\s*<version>)([^<]*)(</version>)"
         )
-        new_content, n = rx.subn(lambda m: m.group(1) + f.fixed_version + m.group(3), new_content)
-        if n:
+
+        did_change = False
+
+        def replace(match: re.Match) -> str:
+            nonlocal did_change
+            if not _same_version(match.group(2), f.current_version):
+                return match.group(0)
+            did_change = True
+            return match.group(1) + f.fixed_version + match.group(3)
+
+        new_content = rx.sub(replace, new_content)
+        if did_change:
             changed.append(f)
     return new_content, changed
 
@@ -98,8 +120,8 @@ def _bump_gomod_content(content: str, findings: List[Finding]) -> Tuple[str, Lis
     out_lines: List[str] = []
     for line in content.splitlines():
         m = re.match(r"^(?P<indent>\s*)(?P<mod>\S+)\s+(?P<ver>v?\S+)(?P<rest>.*)$", line)
-        if m and m.group("mod") in wanted:
-            f = wanted[m.group("mod")]
+        f = wanted.get(m.group("mod")) if m else None
+        if f and _same_version(m.group("ver"), f.current_version):
             prefix = "v" if m.group("ver").startswith("v") else ""
             out_lines.append(f"{m.group('indent')}{m.group('mod')} {prefix}{f.fixed_version}{m.group('rest')}")
             changed.append(f)

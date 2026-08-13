@@ -32,10 +32,10 @@ _PROMPT = textwrap.dedent(
     File: {file}
     Reported line: {line}
 
-    Return the COMPLETE corrected contents of the file, nothing else — no
+    Return the COMPLETE corrected snippet below, nothing else — no
     markdown fences, no explanation.
 
-    ----- CURRENT FILE -----
+    ----- CURRENT SNIPPET: lines {start_line}-{end_line} -----
     {content}
     """
 )
@@ -50,14 +50,32 @@ def available() -> bool:
 
 
 def _strip_fences(text: str) -> str:
-    text = text.strip()
-    if text.startswith("```"):
-        lines = text.splitlines()
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        lines = stripped.splitlines()
         lines = lines[1:] if lines else lines
         if lines and lines[-1].strip().startswith("```"):
             lines = lines[:-1]
-        text = "\n".join(lines)
+        return "\n".join(lines)
     return text
+
+
+def _context_window(content: str, line: int | None, radius: int = 20) -> tuple[int, int, str]:
+    lines = content.splitlines(keepends=True)
+    if not lines:
+        return 1, 1, ""
+    reported = max(1, min(line or 1, len(lines)))
+    start = max(1, reported - radius)
+    end = min(len(lines), reported + radius)
+    return start, end, "".join(lines[start - 1:end])
+
+
+def _replace_window(content: str, start: int, end: int, replacement: str) -> str:
+    lines = content.splitlines(keepends=True)
+    replacement_lines = replacement.splitlines(keepends=True)
+    if replacement and not replacement.endswith(("\n", "\r")) and end < len(lines):
+        replacement_lines[-1] += "\n"
+    return "".join(lines[:start - 1] + replacement_lines + lines[end:])
 
 
 def fix_code(app_dir: str, finding: Finding) -> Optional[Patch]:
@@ -68,6 +86,7 @@ def fix_code(app_dir: str, finding: Finding) -> Optional[Patch]:
         return None
     with open(path, "r", encoding="utf-8") as fh:
         original = fh.read()
+    start_line, end_line, snippet = _context_window(original, finding.line)
 
     try:
         import vertexai
@@ -85,12 +104,15 @@ def fix_code(app_dir: str, finding: Finding) -> Optional[Patch]:
         category=finding.category,
         file=finding.file,
         line=finding.line,
-        content=original,
+        start_line=start_line,
+        end_line=end_line,
+        content=snippet,
     )
     resp = model.generate_content(prompt)
-    new_content = _strip_fences(resp.text)
-    if not new_content or new_content == original:
+    new_snippet = _strip_fences(resp.text)
+    if not new_snippet or new_snippet == snippet:
         return None
+    new_content = _replace_window(original, start_line, end_line, new_snippet)
 
     return Patch(
         finding=finding,

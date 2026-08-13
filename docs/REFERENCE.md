@@ -58,7 +58,6 @@ secfix-ci-demo/
 │   └── test_hard_cases.py          hard/complex scan stress test
 └── .github/
     ├── workflows/security-fix.yml  scan → conditional secfix fix PR
-    ├── workflows/ci.yml            runs all test suites on push/PR
 ```
 
 ---
@@ -183,6 +182,8 @@ Black Duck origin-id prefix (`pypi`/`npmjs`/`maven`/`golang` →
 present, and returns **one** patch spanning all of them. Untouched entries
 (project version, unrelated modules) are preserved.
 
+- **Reported current version must match the direct manifest entry** → otherwise
+  the finding is treated as scanner noise/transitive and escalated.
 - **Multiple CVEs on one component** → the **highest** fixed version wins.
 - **Transitive / not-in-manifest** components → **escalated**.
 - **No fixed version** available → **escalated**.
@@ -212,7 +213,8 @@ actually gone after the change.
 ### 6.3 SAST — AI provider (`fixers/sast.py`, optional)
 For categories the rules don't cover, an optional **Vertex AI (Gemini)** provider
 proposes a minimal patch. It is enabled only when `SECFIX_LLM_PROVIDER=vertex`
-plus Google credentials are present. **Its output is never trusted blindly** —
+plus Google credentials are present. Fortify prompts include only the reported
+line plus 20 lines before and after it. **Its output is never trusted blindly** —
 it must still clear the residue check and pass validation, else it's discarded.
 
 ### 6.4 Orchestrator (`fixers/code.py`)
@@ -391,10 +393,10 @@ Secrets belong **only** in your CI secret store — never in code or the YAML.
 
 Run everything:
 ```bash
-py -m unittest discover -s tests            # 13 tests
+py -m unittest discover -s tests            # 20 tests
 py -m unittest discover -s sample_app/tests # 4 tests
 ```
-All run offline. `ci.yml` runs them on every push/PR.
+All run offline.
 
 ---
 

@@ -9,7 +9,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from secfix.normalize import normalize_blackduck, normalize_fortify  # noqa: E402
-from secfix.fixers.deps import bump_requirements  # noqa: E402
+from secfix.fixers.deps import apply_dependency_fixes, bump_requirements  # noqa: E402
 from secfix.fixers import rules  # noqa: E402
 from secfix.fixers.code import fix_code_finding  # noqa: E402
 from secfix.models import Finding  # noqa: E402
@@ -54,6 +54,12 @@ class DepsFixerTests(unittest.TestCase):
         self.assertIsNotNone(patch)
         self.assertIn("PyYAML==5.4", patch.files["requirements.txt"])
         self.assertIn("requests==2.19.1", patch.files["requirements.txt"])  # untouched
+
+    def test_blackduck_current_version_must_match_manifest(self):
+        findings = [Finding("blackduck", "dependency_vuln", "critical", "x",
+                            cve="CVE-1", component="PyYAML", current_version="5.2", fixed_version="5.4")]
+        patch = apply_dependency_fixes(self.d, findings)
+        self.assertIsNone(patch)
 
 
 class SastRuleTests(unittest.TestCase):
