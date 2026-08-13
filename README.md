@@ -68,9 +68,8 @@ secfix-ci-demo/
 │   └── test_pipeline_e2e.py    full pipeline simulation (git + mock GitHub API)
 └── .github/
     ├── workflows/
-    │   ├── security-fix.yml     scan → secfix check → conditional fix PR
+  │   ├── security-fix.yml     scan → conditional secfix fix PR
     │   └── ci.yml              self-test: runs all three test suites
-    └── actions/secfix/action.yml    reusable composite action
 ```
 
 ## Quickstart (local)
@@ -95,7 +94,7 @@ py -m secfix --root . \
 
 The pipeline in [.github/workflows/security-fix.yml](.github/workflows/security-fix.yml)
 runs on pushes to `main`. It uses the committed demo Black Duck/Fortify reports
-as the scan output for now, asks `secfix --check-only` whether actionable
+as the scan output for now, lets the scan step report whether actionable
 vulnerabilities exist, and only then calls `secfix --open-pr`. A second workflow,
 [.github/workflows/ci.yml](.github/workflows/ci.yml), runs the agent/sample/pipeline
 tests on every push.
@@ -142,9 +141,9 @@ does — then asserts the fixes were applied, a `secfix/auto-*` branch was pushe
 and the PR was created with the right base/head/body. All suites pass locally:
 
 ```text
-tests/ (agent + scanner-clients + pipeline + hard + multilang)   14 tests   OK
+tests/ (agent + scanner-clients + pipeline + hard + multilang)   17 tests   OK
 sample_app/tests                                                  4 tests   OK
-workflow YAML   ci.yml, security-fix.yml, action.yml  parse OK
+workflow YAML   ci.yml, security-fix.yml  parse OK
 ```
 
 ## Security notes

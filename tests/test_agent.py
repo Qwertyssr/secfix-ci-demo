@@ -13,36 +13,6 @@ from secfix.fixers.deps import bump_requirements  # noqa: E402
 from secfix.fixers import rules  # noqa: E402
 from secfix.fixers.code import fix_code_finding  # noqa: E402
 from secfix.models import Finding  # noqa: E402
-from secfix import cli  # noqa: E402
-
-
-class CliCheckTests(unittest.TestCase):
-    def test_check_only_writes_no_vulnerability_outputs(self):
-        d = tempfile.mkdtemp()
-        old_output = os.environ.get("GITHUB_OUTPUT")
-        output = os.path.join(d, "github-output.txt")
-        blackduck = os.path.join(d, "blackduck.json")
-        fortify = os.path.join(d, "fortify.json")
-        try:
-            with open(blackduck, "w", encoding="utf-8") as fh:
-                fh.write('{"items": []}')
-            with open(fortify, "w", encoding="utf-8") as fh:
-                fh.write('{"data": []}')
-            os.environ["GITHUB_OUTPUT"] = output
-
-            code = cli.run(["--check-only", "--blackduck", blackduck, "--fortify", fortify])
-
-            self.assertEqual(code, 0)
-            with open(output, encoding="utf-8") as fh:
-                content = fh.read()
-            self.assertIn("has_vulnerabilities=false", content)
-            self.assertIn("finding_count=0", content)
-        finally:
-            if old_output is None:
-                os.environ.pop("GITHUB_OUTPUT", None)
-            else:
-                os.environ["GITHUB_OUTPUT"] = old_output
-            shutil.rmtree(d)
 
 
 class NormalizeTests(unittest.TestCase):

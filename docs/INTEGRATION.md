@@ -11,7 +11,7 @@ There are two ways to feed findings to secfix. Pick per scanner — you can mix.
 | **File** | run the scanner CLI, emit JSON | it reads the JSON file |
 
 The demo repo's shipped GitHub workflow uses committed sample reports for now,
-then lets `secfix --check-only` decide whether the fixing/PR step should run.
+then lets the scan step decide whether the fixing/PR step should run.
 For a real pipeline, replace that scan step with your Black Duck/Fortify export
 or call secfix in live API mode.
 
@@ -130,18 +130,13 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install git+https://github.com/<owner>/secfix-ci-demo@main
       - name: Run security scans
+        id: security-scan
         run: |
           your-blackduck-export > scan_reports/blackduck.json
           your-fortify-export   > scan_reports/fortify.json
-      - name: Check vulnerabilities with secfix
-        id: secfix-check
-        run: |
-          python -m secfix --check-only --root . \
-            --blackduck scan_reports/blackduck.json \
-            --fortify scan_reports/fortify.json \
-            --severities critical,high
+          echo "has_vulnerabilities=true" >> "$GITHUB_OUTPUT"
       - name: secfix fix and PR
-        if: steps.secfix-check.outputs.has_vulnerabilities == 'true'
+        if: steps.security-scan.outputs.has_vulnerabilities == 'true'
         env:
           GITHUB_TOKEN:   ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -166,22 +161,9 @@ jobs:
     -f default_workflow_permissions=write -F can_approve_pull_request_reviews=true
   ```
 
-### C3. Composite action (shortest)
-```yaml
-- uses: <owner>/secfix-ci-demo/.github/actions/secfix@main
-  with:
-    blackduck: scan_reports/blackduck.json   # or use live flags via env
-    fortify:   scan_reports/fortify.json
-    req:       requirements.txt
-    test-cmd:  "python -m pytest -q"
-    open-pr:   "true"
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
 > The demo repo's [security-fix.yml](../.github/workflows/security-fix.yml) is the
-> simplest starting point: scan reports, `secfix --check-only`, then conditional
-> `secfix --open-pr`.
+> simplest starting point: scan reports, scan-owned vulnerability output, then
+> conditional `secfix --open-pr`.
 
 ---
 

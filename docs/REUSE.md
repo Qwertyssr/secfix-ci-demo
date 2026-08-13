@@ -61,7 +61,6 @@ python -m secfix
   --repo owner/name          GitHub repo (defaults to $GITHUB_REPOSITORY)
   --open-pr                  commit, push and open the PR
   --pr-body-out FILE         write the PR markdown body
-  --check-only               write has_vulnerabilities/finding_count outputs and stop
   --fail-on-findings         exit 2 if any actionable findings were present
 ```
 
@@ -90,9 +89,9 @@ integration tests that mock each vendor's API
 
 The shipped [security-fix.yml](../.github/workflows/security-fix.yml) is a simple
 demo pipeline: committed sample reports stand in for Black Duck/Fortify output,
-`secfix --check-only` gates the job, and `secfix --open-pr` runs only when
-actionable vulnerabilities exist. To go live, replace the demo scan step with
-your scanner exports or use the live API flags above.
+the scan step gates the job, and `secfix --open-pr` runs only when actionable
+vulnerabilities exist. To go live, replace the demo scan step with your scanner
+exports or use the live API flags above.
 
 ## 3a. GitHub Actions — copy the workflow
 
@@ -109,17 +108,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: |          # produce scan_reports/*.json from YOUR scanners here
+      - id: security-scan
+        run: |          # produce scan_reports/*.json from YOUR scanners here
           your-blackduck-export > scan_reports/blackduck.json
           your-fortify-export   > scan_reports/fortify.json
+          echo "has_vulnerabilities=true" >> "$GITHUB_OUTPUT"
       - run: pip install git+https://github.com/<owner>/secfix-ci-demo@main
-      - id: secfix-check
-        run: |
-          python -m secfix --check-only \
-            --blackduck scan_reports/blackduck.json \
-            --fortify scan_reports/fortify.json \
-            --severities critical,high
-      - if: steps.secfix-check.outputs.has_vulnerabilities == 'true'
+      - if: steps.security-scan.outputs.has_vulnerabilities == 'true'
         run: |
           python -m secfix --root . \
             --blackduck scan_reports/blackduck.json \
@@ -132,23 +127,7 @@ jobs:
         env: { GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
 ```
 
-## 3b. GitHub Actions — use the composite action
-
-Even shorter, via [.github/actions/secfix](../.github/actions/secfix/action.yml):
-
-```yaml
-- uses: <owner>/secfix-ci-demo/.github/actions/secfix@main
-  with:
-    blackduck: scan_reports/blackduck.json
-    fortify:   scan_reports/fortify.json
-    req:       requirements.txt
-    test-cmd:  "python -m unittest discover -s tests"
-    open-pr:   "true"
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-## 3c. GitLab CI (opens a Merge Request)
+## 3b. GitLab CI (opens a Merge Request)
 
 `github_pr.py` is GitHub-specific; for GitLab, swap the publish step for the
 GitLab MR API (or run without `--open-pr` and let a `glab`/curl step open the MR

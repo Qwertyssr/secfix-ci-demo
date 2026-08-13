@@ -1,6 +1,6 @@
-# Simple demo CI: security scan -> secfix check -> secfix fix PR when needed.
+# Simple demo CI: security scan -> secfix fix PR when needed.
 # The demo uses committed Black Duck/Fortify-shaped reports because no scanner
-# APIs are configured yet. Secfix owns the finding check, fixes, validation, and PR.
+# APIs are configured yet. Secfix owns fixes, validation, and PR creation.
 
 name: security-fix
 
@@ -27,22 +27,40 @@ jobs:
           python-version: "3.12"
 
       - name: Run security scan (demo reports)
+        id: security-scan
         run: |
           test -f scan_reports/blackduck.json
           test -f scan_reports/fortify.json
-          echo "Demo Black Duck and Fortify reports are ready."
+          python - <<'PY'
+          import json
+          import os
 
-      - name: Check vulnerabilities with secfix
-        id: secfix-check
-        run: |
-          python -m secfix \
-            --check-only \
-            --blackduck scan_reports/blackduck.json \
-            --fortify scan_reports/fortify.json \
-            --severities critical,high
+          allowed = {"critical", "high"}
+
+          with open("scan_reports/blackduck.json", encoding="utf-8") as fh:
+              blackduck = json.load(fh)
+          with open("scan_reports/fortify.json", encoding="utf-8") as fh:
+              fortify = json.load(fh)
+
+          count = 0
+          for item in blackduck.get("items", []):
+              vuln = item.get("vulnerabilityWithRemediation", {})
+              if vuln.get("severity", "").lower() in allowed:
+                  count += 1
+          for issue in fortify.get("data", []):
+              severity = issue.get("friority") or issue.get("severity") or ""
+              if severity.lower() in allowed:
+                  count += 1
+
+          has_vulnerabilities = "true" if count else "false"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"has_vulnerabilities={has_vulnerabilities}\n")
+              fh.write(f"finding_count={count}\n")
+          print(f"Security scan found {count} critical/high vulnerabilities.")
+          PY
 
       - name: Fix vulnerabilities and open PR with secfix
-        if: steps.secfix-check.outputs.has_vulnerabilities == 'true'
+        if: steps.security-scan.outputs.has_vulnerabilities == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
